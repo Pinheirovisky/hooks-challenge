@@ -26,13 +26,7 @@ interface Product {
 }
 
 const Cart = (): JSX.Element => {
-  const {
-    cart,
-    removeProduct,
-    updateProductAmount,
-    deleteProduct,
-    finalizeOrder,
-  } = useCart();
+  const { cart, removeProduct, updateProductAmount, finalizeOrder } = useCart();
 
   const cartFormatted: ProductFormatted[] = useMemo(
     () =>
@@ -55,15 +49,15 @@ const Cart = (): JSX.Element => {
   );
 
   function handleProductIncrement(product: Product) {
-    updateProductAmount({ productId: product.id, amount: 0 });
+    updateProductAmount({ productId: product.id, amount: 1 });
   }
 
   function handleProductDecrement(product: Product) {
-    removeProduct(product.id);
+    updateProductAmount({ productId: product.id, amount: -1 });
   }
 
   function handleRemoveProduct(productId: number) {
-    deleteProduct(productId);
+    removeProduct(productId);
   }
 
   function handleFinalizeOrder() {

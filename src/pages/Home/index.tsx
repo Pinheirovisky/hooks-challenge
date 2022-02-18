@@ -1,16 +1,30 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MdAddShoppingCart } from "react-icons/md";
 
 import { ProductList } from "./styles";
 import { formatPrice } from "util/format";
 import { useCart } from "hooks/useCart";
+import { Product } from "models";
+import { api } from "services";
 
 interface CartItemsAmount {
   [key: number]: number;
 }
 
 const Home = (): JSX.Element => {
-  const { addProduct, cart, products } = useCart();
+  const { addProduct, cart } = useCart();
+
+  const [products, setProducts] = useState<Product[]>([]);
+
+  // ? Load products:
+  useEffect(() => {
+    async function loadProducts() {
+      const response = await api.get("/products");
+      setProducts(response.data);
+    }
+
+    loadProducts();
+  }, []);
 
   const cartItemsAmount = useMemo(
     () =>
