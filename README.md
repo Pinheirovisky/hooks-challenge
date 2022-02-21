@@ -1,5 +1,7 @@
 # hooks-challenge
 
+![demo](https://github.com/Pinheirovisky/hooks-challenge/tree/master/public/demo.png)
+
 Desafio de carrinho de compras. A ideia é compreender melhor a utilização do Context, fazendo chamadas de seus métodos a partir de hooks do ReactJs.
 
 ## Rodando a Aplicação
