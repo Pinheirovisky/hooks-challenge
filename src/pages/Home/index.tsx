@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdAddShoppingCart } from "react-icons/md";
 
-import { ProductList } from "./styles";
+// utils:
 import { formatPrice } from "util/format";
-import { useCart } from "hooks/useCart";
-import { Product } from "models";
+
+// services:
 import { api } from "services";
+
+// hooks:
+import { useCart } from "hooks";
+
+// models:
+import { Product } from "models";
+
+// styles:
+import { ProductList } from "./styles";
 
 interface CartItemsAmount {
   [key: number]: number;
@@ -13,8 +22,7 @@ interface CartItemsAmount {
 
 const Home = (): JSX.Element => {
   const { addProduct, cart } = useCart();
-
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>();
 
   // ? Load products:
   useEffect(() => {
@@ -24,7 +32,7 @@ const Home = (): JSX.Element => {
     }
 
     loadProducts();
-  }, []);
+  }, [setProducts]);
 
   const cartItemsAmount = useMemo(
     () =>

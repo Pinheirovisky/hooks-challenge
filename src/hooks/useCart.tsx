@@ -1,15 +1,11 @@
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
 import { toast } from "react-toastify";
-import { api } from "services/api";
 
 // models:
-import { Product, Stock } from "models";
+import { Product } from "models";
+
+// hooks:
+import { api } from "services";
 
 interface CartProviderProps {
   children: ReactNode;
@@ -31,7 +27,6 @@ interface CartContextData {
 const CartContext = createContext<CartContextData>({} as CartContextData);
 
 export function CartProvider({ children }: CartProviderProps): JSX.Element {
-  const [stock, setStock] = useState<Stock[]>([]);
   const [cart, setCart] = useState<Product[]>(() => {
     const storagedCart = localStorage.getItem("@RocketShoes:cart");
 
@@ -42,50 +37,40 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     return [];
   });
 
-  // ? Load stock:
-  useEffect(() => {
-    async function loadStock() {
-      const response = await api.get("/stock");
-      setStock(response.data);
-    }
-
-    loadStock();
-  }, []);
-
   const addProduct = async (productId: number) => {
     try {
       let newCart: Product[] = [];
-      if (products) {
-        if (cart.findIndex((item) => item.id === productId) !== -1) {
-          cart.map((item) => {
-            if (item.id === productId) {
-              const stockAmount =
-                stock.find((item) => item.id === productId)?.amount || 0;
-              const hasInStock = item.amount + 1 <= stockAmount;
+      let hasInStock = false;
+      const response = await api.get(`/stock/${productId}`);
+      const stockAmount = response.data.amount;
 
-              newCart.push({
-                ...item,
-                amount: hasInStock ? item.amount + 1 : item.amount,
-              });
+      if (cart.findIndex((item) => item.id === productId) !== -1) {
+        cart.map((item) => {
+          if (item.id === productId) {
+            hasInStock = item.amount + 1 <= stockAmount;
 
-              !hasInStock &&
-                toast.error("Quantidade solicitada fora de estoque");
+            newCart.push({
+              ...item,
+              amount: hasInStock ? item.amount + 1 : item.amount,
+            });
 
-              return null;
-            }
-            return newCart.push(item);
-          });
-        } else {
-          const newProduct =
-            products.find((product) => product.id === productId) ||
-            ({} as Product);
-          newCart = [...cart, { ...newProduct, amount: 1 }];
-        }
+            if (!hasInStock)
+              toast.error("Quantidade solicitada fora de estoque");
 
-        if (newCart.length > 0) {
-          localStorage.setItem("@RocketShoes:cart", JSON.stringify(newCart));
-          setCart(newCart);
-        }
+            return null;
+          }
+          return newCart.push(item);
+        });
+      } else {
+        const response = await api.get(`/products/${productId}`);
+        const newProduct = response.data;
+        hasInStock = true;
+        newCart = [...cart, { ...newProduct, amount: 1 }];
+      }
+
+      if (newCart.length > 0 && hasInStock) {
+        localStorage.setItem("@RocketShoes:cart", JSON.stringify(newCart));
+        setCart(newCart);
       }
     } catch {
       toast.error("Erro na adição do produto");
@@ -96,16 +81,22 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     try {
       const newCart: Product[] = [];
 
-      cart.map((item) => {
-        if (item.id !== productId) {
-          newCart.push(item);
-          return null;
-        }
-        return null;
-      });
+      const isFoundItem =
+        cart.findIndex((item) => item.id === productId) !== -1;
 
-      localStorage.setItem("@RocketShoes:cart", JSON.stringify(newCart));
-      setCart(newCart);
+      if (isFoundItem) {
+        cart.map((item) => {
+          if (item.id !== productId) {
+            newCart.push(item);
+            return null;
+          }
+          return null;
+        });
+        localStorage.setItem("@RocketShoes:cart", JSON.stringify(newCart));
+        setCart(newCart);
+      } else {
+        toast.error("Erro na remoção do produto");
+      }
     } catch {
       toast.error("Erro na remoção do produto");
     }
@@ -118,34 +109,33 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     try {
       const newCart: Product[] = [];
 
-      if (amount !== 0) {
+      if (amount > 0) {
         if (cart.findIndex((item) => item.id === productId) === -1) {
           toast.error("Erro na alteração de quantidade do produto");
         } else {
-          let hasInStock = false;
+          const response = await api.get(`/stock/${productId}`);
+          const stockAmount = response.data.amount;
+          const hasInStock = amount <= stockAmount;
+          const isValidAmount = hasInStock && amount >= 1;
 
           cart.map((item) => {
             if (item.id === productId) {
-              const stockAmount =
-                stock.find((item) => item.id === productId)?.amount || 0;
-              hasInStock = item.amount - amount * -1 <= stockAmount;
-              const isValidAmount =
-                hasInStock && item.amount - amount * -1 >= 1;
-
-              newCart.push({
-                ...item,
-                amount: isValidAmount ? item.amount - amount * -1 : item.amount,
-              });
+              if (isValidAmount)
+                newCart.push({
+                  ...item,
+                  amount: isValidAmount ? amount : item.amount,
+                });
 
               !hasInStock &&
                 toast.error("Quantidade solicitada fora de estoque");
 
               return null;
             }
-            return newCart.push(item);
+            newCart.push(item);
+            return null;
           });
 
-          if (hasInStock) {
+          if (isValidAmount) {
             localStorage.setItem("@RocketShoes:cart", JSON.stringify(newCart));
             setCart(newCart);
           }
